@@ -327,7 +327,11 @@ void cut_cell_3D::compVolumeIntegrals(/*SetPolyhedron::POLYHEDRON *p*/)
 	T2[X] /= 3; T2[Y] /= 3; T2[Z] /= 3;
 	TP[X] /= 2; TP[Y] /= 2; TP[Z] /= 2;
 
-	// Checked output: All results are the same!
+	// Checked output: Results are the same! Using Bernstein's polynomials and Gauss quadrature!
+	// The input files don't need to be from [0,1].
+
+	std::cout << "T1 = "  << T0 << "\n";
+	std::cout << "\n";
 	std::cout << "Tx = "  << T1[X] << "\n";
 	std::cout << "Ty = "  << T1[Y] << "\n";
 	std::cout << "Tz = "  << T1[Z] << "\n";
@@ -348,7 +352,8 @@ void cut_cell_3D::compFaceIntegrals(SetPolyhedron::FACE *f)
   double k1, k2, k3, k4;
 
   std::cout << "Call to compFaceIntegrals \n";
-  compProjectionIntegrals(f);
+//  compProjectionIntegrals(f);
+  compProjectionIntegralsGauss(f);
 
   w = f->w;
   Point<3> n;
@@ -358,7 +363,28 @@ void cut_cell_3D::compFaceIntegrals(SetPolyhedron::FACE *f)
   int B = f->B;
   int C = f->C;
 
-  k1 = 1 / n[C]; k2 = k1 * k1; k3 = k2 * k1; k4 = k3 * k1;
+//  k1 = 1 / n[C];
+//  k2 = k1 * k1;
+//  k3 = k2 * k1;
+//  k4 = k3 * k1;
+
+// Important!!! the formulation by Mirtich is based on the product of
+// sgn(f->norm[gamma])          *fabs(f->norm[gamma]) = f->norm[gamma]
+// ^^^ From Bernsteins's Poly;   ^^^From the projection of F onto Pi (Jacobian).
+// He doesn't compute the multiplication, instead he uses f->norm[gamma]. However, as I use Gauss
+//  Quadrature, I don't have to multiply by sgn(f->norm[gamma]), which comes from the orientation of
+// the points on the line - in fact I have oriented the points counter-clockwise in X_projection -
+//  so I do not have sgn(...), BUT I still have to multiply by the Jacobian fabs(norm...)
+//vvvvv Jacobian; all the terms are multiplied by it
+  k1 = fabs(1 / n[C]);
+// The following terms represent 1/n[C] provenient from the transformation
+// h(alfa,beta) = (n[A]*alfa+n[B]*beta+w)/(1 / n[C]) TIMES the Jacobian k1.
+  k2 = pow((1 / n[C]), 1)*k1;
+  k3 = pow((1 / n[C]), 2)*k1;
+  k4 = pow((1 / n[C]), 3)*k1;
+//  k3 = fabs(pow((1 / n[C]), 3));
+//  k4 = fabs(pow((1 / n[C]), 4));
+
 
   Fa = k1 * Pa;
   Fb = k1 * Pb;
@@ -409,19 +435,26 @@ void cut_cell_3D::compProjectionIntegrals(SetPolyhedron::FACE *f)
 		a1 = f->verts[(i+1) % f->numVerts][f->A];
 		b1 = f->verts[(i+1) % f->numVerts][f->B];
 
+//		ai_j refers to ai to the power of j
 
-			da = a1 - a0;
-			db = b1 - b0;
-			a0_2 = a0 * a0; a0_3 = a0_2 * a0; a0_4 = a0_3 * a0;
-			b0_2 = b0 * b0; b0_3 = b0_2 * b0; b0_4 = b0_3 * b0;
-			a1_2 = a1 * a1; a1_3 = a1_2 * a1;
-			b1_2 = b1 * b1; b1_3 = b1_2 * b1;
+			da = a1 - a0;			db = b1 - b0;
+			a0_2 = a0 * a0;			a0_3 = a0_2 * a0;
+			a0_4 = a0_3 * a0;		b0_2 = b0 * b0;
+			b0_3 = b0_2 * b0; 		b0_4 = b0_3 * b0;
+			a1_2 = a1 * a1; 		a1_3 = a1_2 * a1;
+			b1_2 = b1 * b1; 		b1_3 = b1_2 * b1;
 
 			C1 = a1 + a0;
-			Ca = a1*C1 + a0_2; Caa = a1*Ca + a0_3; Caaa = a1*Caa + a0_4;
-			Cb = b1*(b1 + b0) + b0_2; Cbb = b1*Cb + b0_3; Cbbb = b1*Cbb + b0_4;
-			Cab = 3*a1_2 + 2*a1*a0 + a0_2; Kab = a1_2 + 2*a1*a0 + 3*a0_2;
-			Caab = a0*Cab + 4*a1_3; Kaab = a1*Kab + 4*a0_3;
+			Ca = a1*C1 + a0_2;
+			Caa = a1*Ca + a0_3;
+			Caaa = a1*Caa + a0_4;
+			Cb = b1*(b1 + b0) + b0_2;
+			Cbb = b1*Cb + b0_3;
+			Cbbb = b1*Cbb + b0_4;
+			Cab = 3*a1_2 + 2*a1*a0 + a0_2;
+			Kab = a1_2 + 2*a1*a0 + 3*a0_2;
+			Caab = a0*Cab + 4*a1_3;
+			Kaab = a1*Kab + 4*a0_3;
 			Cabb = 4*b1_3 + 3*b1_2*b0 + 2*b1*b0_2 + b0_3;
 			Kabb = b1_3 + 2*b1_2*b0 + 3*b1*b0_2 + 4*b0_3;
 
@@ -446,6 +479,145 @@ void cut_cell_3D::compProjectionIntegrals(SetPolyhedron::FACE *f)
 		Pab = Pab/ 24.0;
 		Paab = Paab/ 60.0;
 		Pabb = Pabb/ -60.0;
+}
+
+void cut_cell_3D::compProjectionIntegralsGauss(SetPolyhedron::FACE *f)
+{
+	/* projection integrals */
+	std::cout << "Call to compProjectionIntegralsGAUSS \n";
+
+	double a0, a1, da;
+	double b0, b1, db;
+	double a0_2, a0_3, a0_4, b0_2, b0_3, b0_4;
+	double a1_2, a1_3, b1_2, b1_3;
+	double C1, Ca, Caa, Caaa, Cb, Cbb, Cbbb;
+	double Cab, Kab, Caab, Kaab, Cabb, Kabb;
+
+	P1 = 0.0;
+	Pa = Pb = Paa = Pab = Pbb = Paaa = Paab = Pabb = Pbbb = 0.0;
+
+	SetPolyhedron::LINE *line;
+
+	std::cout << "f->numLines: " <<  f->numLines << "\n";
+//	for (int i = 0; i < f->numVerts; ++i){
+
+	for (int i = 0; i < f->numLines; ++i){
+		line = &f->lines[i];
+		//		std::cout << "n_q_points: "<< n_q_points << "\n";
+		for (int q_point = 0; q_point < 2; ++q_point){
+			std::cout << "q_point: "<< q_point << "\n";
+			double alfa_t, beta_t;
+
+			a0 = f->verts[i][f->A];
+			b0 = f->verts[i][f->B];
+
+			;
+			a1 = f->verts[(i+1) % f->numVerts][f->A];
+			b1 = f->verts[(i+1) % f->numVerts][f->B];
+
+			//		std::cout << "a0 dele: " << a0 << "\n";
+			//		std::cout << "b0 dele: " << b0 << "\n";
+
+			//		std::cout << "a1 dele: " << a1 << "\n";
+			//		std::cout << "b1 dele: " << b1 << "\n";
+
+			da = a1 - a0;			db = b1 - b0;
+
+					std::cout << "da dele: " << da << "\n";
+					std::cout << "db dele: " << db << "\n";
+
+			a0 = line->X_projection[0][f->A];
+			b0 = line->X_projection[0][f->B];
+
+			a1 = line->X_projection[1][f->A];
+			b1 = line->X_projection[1][f->B];
+
+			//		std::cout << "a0 meu: " << a0 << "\n";
+			//		std::cout << "b0 meu: " << b0 << "\n";
+
+			//		std::cout << "a1 meu: " << a1 << "\n";
+			//		std::cout << "b1 meu: " << b1 << "\n";
+
+			da = line->norm_projection[1]; // This is actually da = nBeta
+			db = line->norm_projection[0]; // This is actually db = nAlfa
+
+			Point <2> n(db,da);
+
+					std::cout << "da meu: " << da << "\n";
+					std::cout << "db meu: " << db << "\n";
+
+			alfa_t = a0+ (a1 - a0 )*face_quadrature_points[q_point](0);
+			beta_t = b0+ (b1 - b0 )*face_quadrature_points[q_point](0);
+			std::cout << "alfa_t: " << alfa_t << "\n";
+			std::cout << "beta_t: " << beta_t << "\n";
+
+			a0 = alfa_t;
+			b0 = beta_t;
+			//
+			////		ai_j refers to ai to the power of j
+
+			a0_2 = a0 * a0;			a0_3 = a0_2 * a0;
+			a0_4 = a0_3 * a0;		b0_2 = b0 * b0;
+			b0_3 = b0_2 * b0; 		b0_4 = b0_3 * b0;
+			//			a1_2 = a1 * a1; 		a1_3 = a1_2 * a1;
+			//			b1_2 = b1 * b1; 		b1_3 = b1_2 * b1;
+
+			//			C1 = a1 + a0;
+			C1 = a0;
+//			Point<2> C1_aux(a0/2,b0/2);
+//			C1 = C1_aux*n;
+
+//			Point<2> Ca_aux(a0_2/4,a0*b0/2);
+			Ca = a0_2;
+//			Ca = Ca_aux*n;
+
+			Caa = a0_3;
+			Caaa = a0_4;
+			//			Point<2> Cb_aux(a0*b0/2,a0*b0_2/4);
+			//			Cb = Cb_aux*n;
+			Cb = b0_2;
+			Cbb = b0_3;
+			Cbbb = b0_4;
+			Cab = a0_2*b0;
+			//			Kab = a1_2 + 2*a1*a0 + 3*a0_2;
+			Caab = a0_3*b0;
+			//			Kaab = a1*Kab + 4*a0_3;
+			Cabb = a0_2*b0_2;
+//			Cabb = a0*b0_3;
+			//			Kabb = b1_3 + 2*b1_2*b0 + 3*b1*b0_2 + 4*b0_3;
+
+			std::cout  << "face_quadrature_weights[q_point]: "<< face_quadrature_weights[q_point] << "\n";
+			std::cout  << "line->length_projection: "<< line->length_projection << "\n";
+
+
+			P1 += db*C1*face_quadrature_weights[q_point]*line->length_projection;
+			Pa += db*Ca*face_quadrature_weights[q_point]*line->length_projection;
+			Paa += db*Caa*face_quadrature_weights[q_point]*line->length_projection;
+			Paaa += db*Caaa*face_quadrature_weights[q_point]*line->length_projection;
+			Pb += da*Cb*face_quadrature_weights[q_point]*line->length_projection;
+			Pbb += da*Cbb*face_quadrature_weights[q_point]*line->length_projection;
+			Pbbb += da*Cbbb*face_quadrature_weights[q_point]*line->length_projection;
+			Pab += db*Cab*face_quadrature_weights[q_point]*line->length_projection;
+			Paab += db*Caab*face_quadrature_weights[q_point]*line->length_projection;
+			Pabb += db*Cabb*face_quadrature_weights[q_point]*line->length_projection;
+//			Pabb += da*Cabb*face_quadrature_weights[q_point]*line->length_projection;
+
+		}
+	}
+	P1 = P1/1.0;
+	Pa = Pa/2.0;
+	Paa =Paa/3.0;
+	Paaa = Paaa/ 4.0;
+//		Pb = Pb/-2.0;
+	Pb = Pb/2.0;
+//		Pbb = Pbb/-3.0;
+	Pbb = Pbb/3.0;
+//		Pbbb = Pbbb/ -4.0;
+	Pbbb = Pbbb/ 4.0;
+	Pab = Pab/ 2.0;
+	Paab = Paab/ 3.0;
+//		Pabb = Pabb/ -3.0;
+	Pabb = Pabb/ 2.0;
 }
 
 
