@@ -141,6 +141,7 @@ public:
 
 	void compFaceIntegrals(SetPolyhedron::FACE *f);
 	void compProjectionIntegrals(SetPolyhedron::FACE *f);
+	void compProjectionIntegralsGauss(SetPolyhedron::FACE *f);
 
 	double Fa, Fb, Fc, Faa, Fbb, Fcc, Faaa, Fbbb, Fccc, Faab, Fbbc, Fcca;
 	double P1 , Pa, Pb, Paa, Pab, Pbb, Paaa, Paab, Pabb, Pbbb;

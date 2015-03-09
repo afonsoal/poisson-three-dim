@@ -42,30 +42,43 @@ void SetPolyhedron::ReadPolyhedron(/*char *name,*/ /*POLYHEDRON *p*/)
   FACE * f = new FACE ();
   LINE * l = new LINE ();
 
-  p->numVerts = 8;
+  p->numVerts = 8; // CUBE
+//  p->numVerts = 4; // TETRA
+//  p->numVerts = 12; // ICOSA
   p->verts.resize(p->numVerts); // Have to change accordingly later;
-  std::ifstream read_file("cube_afonso.txt");
+  std::ifstream read_file("cube_points.txt"); // CUBE
+//  std::ifstream read_file("tetra_points.txt"); // TETRA
+//  std::ifstream read_file("icosa_points.txt"); // ICOSA
   assert(read_file.is_open());
-  for (unsigned int i=0; i<8; i++)
+  for (unsigned int i=0; i<p->numVerts; i++)
   {
 	  read_file >> p->verts[i][X] >> p->verts[i][Y] >> p->verts[i][Z];
   }
   read_file.close();
 
 
-  p->numFaces = 6;
+  p->numFaces = 6; // CUBE
+//  p->numFaces = 4; // TETRA
+//  p->numFaces = 20; // ICOSAHEDROn
   // Read file of vertices indices; the orientation must match that of the points coordinates.
-  std::ifstream read_file2("cube_afonso2.txt");
+  std::ifstream read_file2("cube_indices.txt");
+//  std::ifstream read_file2("tetra_indices.txt");
+//  std::ifstream read_file2("icosa_indices.txt");
   assert(read_file2.is_open());
   for (int j = 0; j < p->numFaces; ++j)
   {
 	  f = &p->faces[j];
 	  // The size has to be changed accordingly later, with the number of vertices of the face.
-	  f->verts_idx.resize(MAX_POLYGON_SZ);
-//	  	  f->poly = p; // ERROR; cannot convert...
-//	   p = ‘SetPolyhedron::POLYHEDRON* {aka SetPolyhedron::polyhedron*}’
-//	   f->poly = ‘polyhedron*’  ? Why is it different?
-	  read_file2 >> f->verts_idx[0] >> f->verts_idx[1] >> f->verts_idx[2] >> f->verts_idx[3];
+	  f->verts_idx.resize(4); // CUBE
+//	  f->verts_idx.resize(3); // TETRA
+//	  f->verts_idx.resize(3); // ICOSA
+	  f->numVerts = 4; // CUBE
+//	  f->numVerts = 3; // TETRA
+//	  f->numVerts = 3; // ICOSA
+	  f->verts.resize(4); // CUBE
+//	  f->verts.resize(3); // TETRA
+	  read_file2 >> f->verts_idx[0] >> f->verts_idx[1] >> f->verts_idx[2] >> f->verts_idx[3]; // CUBE
+//	  read_file2 >> f->verts_idx[0] >> f->verts_idx[1] >> f->verts_idx[2]; // TETRA, ICOSA
   }
   read_file2.close();
 
@@ -75,8 +88,7 @@ void SetPolyhedron::ReadPolyhedron(/*char *name,*/ /*POLYHEDRON *p*/)
 
   for (int i = 0; i < p->numFaces; ++i) {
 	  f = &p->faces[i];
-	  f->numVerts = 4; // Change accordingly!
-	  f->verts.resize(/*MAX_VERTS*/4); // Change accordingly!
+
 	  // Input the coordinates of all vertices for each face. Note that the vertex numbering
 	  // "maps" the vertex that are on each face.
 	  for (int j = 0; j < f->numVerts; ++j) {
